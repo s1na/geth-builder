@@ -50,10 +50,16 @@ func (c *Config) Verbose() bool {
 
 // AbsolutePath to tracing package.
 func (c *Config) AbsolutePath() (string, error) {
+	if filepath.IsAbs(c.Path) {
+		return c.Path, nil
+	}
 	return filepath.Abs(filepath.Join(c.configDir, c.Path))
 }
 
 // AbsoluteOutputDir returns the absolute path of the output directory.
 func (c *Config) AbsoluteOutputDir() (string, error) {
+	if filepath.IsAbs(c.OutputDir) {
+		return c.OutputDir, nil
+	}
 	return filepath.Abs(filepath.Join(c.configDir, c.OutputDir))
 }
