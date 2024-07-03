@@ -8,12 +8,22 @@ import (
 	"github.com/s1na/geth-builder/builder"
 	"github.com/s1na/geth-builder/config"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
 )
 
 func main() {
 	app := &cli.App{
 		Name:  "geth-builder",
 		Usage: "Build Geth with custom tracer",
+		Commands: []*cli.Command{
+			{
+				Name:  "init",
+				Usage: "Initialize a new configuration file",
+				Action: func(c *cli.Context) error {
+					return initCmd(c)
+				},
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
@@ -67,4 +77,18 @@ func run(ctx *cli.Context) {
 	}
 
 	log.Println("Geth built successfully.")
+}
+
+func initCmd(ctx *cli.Context) error {
+	cfg := config.DefaultConfig
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	path := "./geth-builder.yaml"
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return err
+	}
+	log.Printf("Configuration file created at %s\n", path)
+	return nil
 }

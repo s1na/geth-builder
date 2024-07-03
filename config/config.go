@@ -17,6 +17,13 @@ type Config struct {
 	verbose    bool
 }
 
+var DefaultConfig = Config{
+	GethRepo:   "github.com/ethereum/go-ethereum",
+	GethBranch: "master",
+	Path:       "./",
+	OutputDir:  "./build",
+}
+
 func LoadConfig(configFile string) (*Config, error) {
 	data, err := os.ReadFile(configFile)
 	if err != nil {
