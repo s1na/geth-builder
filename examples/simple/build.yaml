@@ -1,0 +1,5 @@
+geth_repo: "https://github.com/ethereum/go-ethereum"
+geth_branch: "v1.14.4"
+path: "./"
+build_flags: ""
+output_dir: "./build"
