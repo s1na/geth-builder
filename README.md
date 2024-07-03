@@ -20,12 +20,18 @@ mkdir simple
 cd simple
 ```
 
-The structure will be simply as follows:
+Initialize a config file:
+
+```terminal
+./bin/geth-builder init
+```
+
+This will dump default configuration to `geth-builder.yaml`. In the simplest case the complete package structure will be as follows:
 
 ```
 simple/
   - tracer.go
-  - config.yaml
+  - geth-builder.yaml
 ```
 
 Note: The go files should have the same package name as the directory.
@@ -49,7 +55,7 @@ Note: in this examples paths are relative to the location of the config file.
 Now to bundle the plugin together with geth run:
 
 ```terminal
-./bin/geth-builder --config simple/config.yaml
+./bin/geth-builder --config simple/geth-builder.yaml
 ```
 
 It will output the geth binary at `./simple/build/geth`.
