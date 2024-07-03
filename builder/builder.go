@@ -49,9 +49,11 @@ func BuildGeth(config *config.Config) (string, error) {
 
 	cmd := exec.Command("make", "geth")
 	cmd.Dir = gethDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "GOBIN="+filepath.Join(config.OutputDir))
+	if config.Verbose() {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	return gethDir, cmd.Run()
 }
 
