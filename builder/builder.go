@@ -90,12 +90,14 @@ func copyLocalTracer(srcDir, destDir string) error {
 		srcPath := filepath.Join(srcDir, entry.Name())
 		destPath := filepath.Join(destDir, entry.Name())
 		if entry.IsDir() {
-			err = os.MkdirAll(destPath, entry.Type())
+			info, err := entry.Info()
 			if err != nil {
 				return err
 			}
-			err = copyLocalTracer(srcPath, destPath)
-			if err != nil {
+			if err := os.MkdirAll(destPath, info.Mode()); err != nil {
+				return err
+			}
+			if err := copyLocalTracer(srcPath, destDir); err != nil {
 				return err
 			}
 		} else {
