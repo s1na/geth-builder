@@ -1,23 +1,50 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/s1na/geth-builder/builder"
 	"github.com/s1na/geth-builder/config"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	configFile := flag.String("config", "build.yaml", "Path to configuration file")
-	flag.Parse()
+	app := &cli.App{
+		Name:  "geth-builder",
+		Usage: "Build Geth with custom tracer",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Value:   "build.yaml",
+				Usage:   "Path to configuration file",
+			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Usage:   "Enable verbose output",
+				Aliases: []string{"v"},
+			},
+		},
+		Action: func(c *cli.Context) error {
+			run(c)
+			return nil
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		log.Fatalf("error: %v\n", err)
+	}
+}
 
+func run(ctx *cli.Context) {
 	// Load configuration
-	cfg, err := config.LoadConfig(*configFile)
+	cfg, err := config.LoadConfig(ctx.String("config"))
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v\n", err)
+	}
+	if ctx.Bool("verbose") {
+		cfg.SetVerbose()
 	}
 
 	// Build Geth with custom tracer

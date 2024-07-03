@@ -14,7 +14,7 @@ import (
 func BuildGeth(config *config.Config) (string, error) {
 	// Clone the specified Geth repository and branch
 	gethDir := "./go-ethereum"
-	err := CloneRepo(config.GethRepo, config.GethBranch, gethDir)
+	err := CloneRepo(config.GethRepo, config.GethBranch, gethDir, config.Verbose())
 	if err != nil {
 		return "", err
 	}
@@ -55,11 +55,13 @@ func BuildGeth(config *config.Config) (string, error) {
 	return gethDir, cmd.Run()
 }
 
-func CloneRepo(repoURL, branch, destDir string) error {
+func CloneRepo(repoURL, branch, destDir string, verbose bool) error {
 	if _, err := os.Stat(destDir); os.IsNotExist(err) {
 		cmd := exec.Command("git", "clone", "--depth", "1", "-b", branch, repoURL, destDir)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		if verbose {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		return cmd.Run()
 	}
 	log.Printf("Directory %s already exists, skipping clone.\n", destDir)

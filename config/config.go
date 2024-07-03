@@ -14,6 +14,7 @@ type Config struct {
 	BuildFlags string `yaml:"build_flags"`
 	OutputDir  string `yaml:"output_dir"`
 	configDir  string
+	verbose    bool
 }
 
 func LoadConfig(configFile string) (*Config, error) {
@@ -35,6 +36,16 @@ func LoadConfig(configFile string) (*Config, error) {
 	config.configDir = filepath.Dir(absConfigFilePath)
 
 	return &config, nil
+}
+
+// SetVerbose sets the verbose flag.
+func (c *Config) SetVerbose() {
+	c.verbose = true
+}
+
+// Verbose returns the verbose flag.
+func (c *Config) Verbose() bool {
+	return c.verbose
 }
 
 // AbsolutePath to tracing package.
