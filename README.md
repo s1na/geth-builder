@@ -34,7 +34,7 @@ Note: The go files should have the same package name as the directory.
 
 The config files will determine where to fetch the go-ethereum source from, where to locate the tracing package and the output directory:
 
-```
+```yaml
 eth_repo: "https://github.com/ethereum/go-ethereum"
 geth_branch: "v1.14.4"
 path: "./"
