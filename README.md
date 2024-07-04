@@ -55,7 +55,13 @@ Note: in this examples paths are relative to the location of the config file.
 Now to bundle the plugin together with geth run:
 
 ```terminal
-./bin/geth-builder --config simple/geth-builder.yaml
+./bin/geth-builder build --config simple/geth-builder.yaml
 ```
 
-It will output the geth binary at `./simple/build/geth`.
+It will output the geth binary at `./simple/build/geth`. The configuration fields can also be passed as flags, in which case they will override the values in the config file.
+
+```terminal
+./bin/geth-builder build --path ./simple --output ./build
+```
+
+This will build the default geth repository and output the binary to `./build/geth`.

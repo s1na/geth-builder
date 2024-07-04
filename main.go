@@ -23,6 +23,14 @@ func main() {
 					return initCmd(c)
 				},
 			},
+			{
+				Name:  "build",
+				Usage: "Build Geth with custom tracer",
+				Action: func(c *cli.Context) error {
+					run(c)
+					return nil
+				},
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -54,7 +62,7 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			run(c)
+			showHelp(c)
 			return nil
 		},
 	}
@@ -119,6 +127,10 @@ func initCmd(ctx *cli.Context) error {
 	}
 	log.Printf("Configuration file created at %s\n", path)
 	return nil
+}
+
+func showHelp(ctx *cli.Context) {
+	cli.ShowAppHelp(ctx)
 }
 
 func setFlags(ctx *cli.Context, cfg *config.Config) {
