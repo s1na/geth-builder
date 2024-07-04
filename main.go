@@ -28,8 +28,24 @@ func main() {
 			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
-				Value:   "build.yaml",
+				Value:   "geth-builder.yaml",
 				Usage:   "Path to configuration file",
+			},
+			&cli.StringFlag{
+				Name:  "geth.repo",
+				Usage: "Geth repository URL",
+			},
+			&cli.StringFlag{
+				Name:  "geth.branch",
+				Usage: "Geth repository branch",
+			},
+			&cli.StringFlag{
+				Name:  "path",
+				Usage: "Path to local tracer",
+			},
+			&cli.StringFlag{
+				Name:  "output",
+				Usage: "Output directory for built Geth binary",
 			},
 			&cli.BoolFlag{
 				Name:    "verbose",
@@ -49,13 +65,22 @@ func main() {
 
 func run(ctx *cli.Context) {
 	// Load configuration
-	cfg, err := config.LoadConfig(ctx.String("config"))
-	if err != nil {
-		log.Fatalf("Error loading configuration: %v\n", err)
+	var (
+		cfg *config.Config
+		err error
+	)
+	if ctx.IsSet("config") {
+		cfg, err = config.LoadConfig(ctx.String("config"))
+		if err != nil {
+			log.Fatalf("Error loading configuration: %v\n", err)
+		}
+	} else {
+		cfg, err = config.GetDefaultConfig()
+		if err != nil {
+			log.Fatalf("Error getting default configuration: %v\n", err)
+		}
 	}
-	if ctx.Bool("verbose") {
-		cfg.SetVerbose()
-	}
+	setFlags(ctx, cfg)
 
 	// Build Geth with custom tracer
 	gethDir, err := builder.BuildGeth(cfg)
@@ -80,7 +105,10 @@ func run(ctx *cli.Context) {
 }
 
 func initCmd(ctx *cli.Context) error {
-	cfg := config.DefaultConfig
+	cfg, err := config.GetDefaultConfig()
+	if err != nil {
+		return err
+	}
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err
@@ -91,4 +119,22 @@ func initCmd(ctx *cli.Context) error {
 	}
 	log.Printf("Configuration file created at %s\n", path)
 	return nil
+}
+
+func setFlags(ctx *cli.Context, cfg *config.Config) {
+	if ctx.IsSet("geth.repo") {
+		cfg.GethRepo = ctx.String("geth.repo")
+	}
+	if ctx.IsSet("geth.branch") {
+		cfg.GethBranch = ctx.String("geth.branch")
+	}
+	if ctx.IsSet("path") {
+		cfg.Path = ctx.String("path")
+	}
+	if ctx.IsSet("output") {
+		cfg.OutputDir = ctx.String("output")
+	}
+	if ctx.Bool("verbose") {
+		cfg.SetVerbose()
+	}
 }

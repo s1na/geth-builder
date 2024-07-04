@@ -84,7 +84,6 @@ func TestConfigAllFields(t *testing.T) {
 	expectedGethRepo := "https://github.com/ethereum/go-ethereum"
 	expectedGethBranch := "master"
 	expectedPath := "./ethereum"
-	expectedBuildFlags := "-v"
 	expectedOutputDir := "./output"
 
 	// Create a YAML configuration string that includes all fields
@@ -92,9 +91,8 @@ func TestConfigAllFields(t *testing.T) {
 geth_repo: "%s"
 geth_branch: "%s"
 path: "%s"
-build_flags: "%s"
 output_dir: "%s"
-`, expectedGethRepo, expectedGethBranch, expectedPath, expectedBuildFlags, expectedOutputDir)
+`, expectedGethRepo, expectedGethBranch, expectedPath, expectedOutputDir)
 
 	// Write the configuration to a temporary file
 	configDir := t.TempDir()
@@ -119,9 +117,6 @@ output_dir: "%s"
 	}
 	if cfg.Path != expectedPath {
 		t.Errorf("expected Path to be %s, got %s", expectedPath, cfg.Path)
-	}
-	if cfg.BuildFlags != expectedBuildFlags {
-		t.Errorf("expected BuildFlags to be %s, got %s", expectedBuildFlags, cfg.BuildFlags)
 	}
 	if cfg.OutputDir != expectedOutputDir {
 		t.Errorf("expected OutputDir to be %s, got %s", expectedOutputDir, cfg.OutputDir)

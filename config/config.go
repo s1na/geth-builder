@@ -11,17 +11,26 @@ type Config struct {
 	GethRepo   string `yaml:"geth_repo"`
 	GethBranch string `yaml:"geth_branch"`
 	Path       string `yaml:"path"`
-	BuildFlags string `yaml:"build_flags"`
 	OutputDir  string `yaml:"output_dir"`
-	configDir  string
+	workingDir string
 	verbose    bool
 }
 
-var DefaultConfig = Config{
-	GethRepo:   "github.com/ethereum/go-ethereum",
+var defaultConfig = Config{
+	GethRepo:   "https://github.com/ethereum/go-ethereum",
 	GethBranch: "master",
 	Path:       "./",
 	OutputDir:  "./build",
+}
+
+func GetDefaultConfig() (*Config, error) {
+	cpy := defaultConfig
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	cpy.workingDir = wd
+	return &cpy, nil
 }
 
 func LoadConfig(configFile string) (*Config, error) {
@@ -40,7 +49,7 @@ func LoadConfig(configFile string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.configDir = filepath.Dir(absConfigFilePath)
+	config.workingDir = filepath.Dir(absConfigFilePath)
 
 	return &config, nil
 }
@@ -60,7 +69,7 @@ func (c *Config) AbsolutePath() (string, error) {
 	if filepath.IsAbs(c.Path) {
 		return c.Path, nil
 	}
-	return filepath.Abs(filepath.Join(c.configDir, c.Path))
+	return filepath.Abs(filepath.Join(c.workingDir, c.Path))
 }
 
 // AbsoluteOutputDir returns the absolute path of the output directory.
@@ -68,5 +77,5 @@ func (c *Config) AbsoluteOutputDir() (string, error) {
 	if filepath.IsAbs(c.OutputDir) {
 		return c.OutputDir, nil
 	}
-	return filepath.Abs(filepath.Join(c.configDir, c.OutputDir))
+	return filepath.Abs(filepath.Join(c.workingDir, c.OutputDir))
 }
