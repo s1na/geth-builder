@@ -30,31 +30,33 @@ func main() {
 					run(c)
 					return nil
 				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "config",
+						Aliases: []string{"c"},
+						Value:   "geth-builder.yaml",
+						Usage:   "Path to configuration file",
+					},
+					&cli.StringFlag{
+						Name:  "geth.repo",
+						Usage: "Geth repository URL",
+					},
+					&cli.StringFlag{
+						Name:  "geth.branch",
+						Usage: "Geth repository branch",
+					},
+					&cli.StringFlag{
+						Name:  "path",
+						Usage: "Path to local tracer",
+					},
+					&cli.StringFlag{
+						Name:  "output",
+						Usage: "Output directory for built Geth binary",
+					},
+				},
 			},
 		},
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				Value:   "geth-builder.yaml",
-				Usage:   "Path to configuration file",
-			},
-			&cli.StringFlag{
-				Name:  "geth.repo",
-				Usage: "Geth repository URL",
-			},
-			&cli.StringFlag{
-				Name:  "geth.branch",
-				Usage: "Geth repository branch",
-			},
-			&cli.StringFlag{
-				Name:  "path",
-				Usage: "Path to local tracer",
-			},
-			&cli.StringFlag{
-				Name:  "output",
-				Usage: "Output directory for built Geth binary",
-			},
 			&cli.BoolFlag{
 				Name:    "verbose",
 				Usage:   "Enable verbose output",
