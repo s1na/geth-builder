@@ -1,42 +1,133 @@
 package builder
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 
 	"github.com/s1na/geth-builder/config"
 	"github.com/s1na/geth-builder/transform"
 )
 
-func BuildGeth(config *config.Config, arch *string) (string, error) {
-	// Clone the specified Geth repository and branch
+type Builder struct {
+	config *config.Config
+	arch   *string
+}
+
+func NewBuilder(config *config.Config, arch *string) *Builder {
+	return &Builder{config, arch}
+}
+
+func (b *Builder) Build() (string, error) {
 	gethDir := "./go-ethereum"
-	err := CloneRepo(config.GethRepo, config.GethBranch, gethDir, config.Verbose())
-	if err != nil {
+	if err := b.prepareSource(gethDir); err != nil {
 		return "", err
 	}
-	// Use the AbsolutePath method to get the absolute path
-	absTracerPath, err := config.AbsolutePath()
+
+	return gethDir, b.build(gethDir, "./cmd/geth")
+
+}
+
+func (b *Builder) build(gethDir, pkg string) error {
+	args := []string{"run", "build/ci.go", "install"}
+	if b.arch != nil {
+		args = append(args, "--arch", *b.arch)
+	}
+	if pkg != "" {
+		args = append(args, pkg)
+	}
+	cmd := exec.Command("go", args...)
+	cmd.Dir = gethDir
+	if b.config.Verbose() {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	return cmd.Run()
+}
+
+func (b *Builder) Archive(typ string) error {
+	gethDir := "./go-ethereum"
+	if err := b.prepareSource(gethDir); err != nil {
+		return fmt.Errorf("failed to fetch and transform source: %v", err)
+	}
+	// Geth archive builder needs all the tooling binaries.
+	if err := b.build(gethDir, ""); err != nil {
+		return fmt.Errorf("failed to build binaries: %v", err)
+	}
+
+	args := []string{"run", "build/ci.go", "archive"}
+	if b.arch != nil {
+		args = append(args, "--arch", *b.arch)
+	}
+	args = append(args, "--type", typ)
+	args = append(args, "./cmd/geth")
+	cmd := exec.Command("go", args...)
+	cmd.Dir = gethDir
+	// Hack to extract archive paths from the output.
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if b.config.Verbose() {
+			fmt.Print(stdout.String())
+			fmt.Fprint(os.Stderr, stderr.String())
+		}
+		return fmt.Errorf("geth archive cmd failed: %v", err)
+	}
+	// Still need to log to user in case verbose flag is set.
+	if b.config.Verbose() {
+		fmt.Print(stdout.String())
+		fmt.Fprint(os.Stderr, stderr.String())
+	}
+	output, err := b.config.AbsoluteOutputDir()
 	if err != nil {
-		return "", err
+		return err
+	}
+	re := regexp.MustCompile(`geth-.*\.(zip|tar.gz)`)
+	matches := re.FindAllString(stdout.String(), -1)
+	if len(matches) == 0 {
+		return fmt.Errorf("no archive files found")
+	}
+	fmt.Printf("matches: %v\n", matches)
+	for _, match := range matches {
+		if err := CopyFile(filepath.Join(gethDir, match), filepath.Join(output, match)); err != nil {
+			return fmt.Errorf("failed to copy archive: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (b *Builder) prepareSource(gethDir string) error {
+	// Clone the specified Geth repository and branch
+	err := CloneRepo(b.config.GethRepo, b.config.GethBranch, gethDir, b.config.Verbose())
+	if err != nil {
+		return err
+	}
+	// Use the AbsolutePath method to get the absolute path
+	absTracerPath, err := b.config.AbsolutePath()
+	if err != nil {
+		return err
 	}
 
 	dest := filepath.Join(gethDir, "eth", "tracers", "native")
 	// Copy the local tracer to the Geth tracers directory
 	err = copyLocalTracer(absTracerPath, dest)
 	if err != nil {
-		return "", err
+		return err
 	}
 	newTracerPath := filepath.Join(dest, filepath.Base(absTracerPath))
 	// Remove go.mod and go.sum files from tracing package if available.
 	if err := os.RemoveAll(filepath.Join(newTracerPath, "go.mod")); err != nil {
-		return "", err
+		return err
 	}
 	if err := os.RemoveAll(filepath.Join(newTracerPath, "go.sum")); err != nil {
-		return "", err
+		return err
 	}
 
 	gethMainPath := filepath.Join(gethDir, "cmd", "geth", "main.go")
@@ -44,22 +135,9 @@ func BuildGeth(config *config.Config, arch *string) (string, error) {
 	importPath := filepath.Join("github.com/ethereum/go-ethereum", "eth", "tracers", "native", pkgName)
 	err = transform.AddImportToFile(gethMainPath, importPath)
 	if err != nil {
-		log.Fatalf("Error modifying main.go: %v\n", err)
+		return err
 	}
-
-	args := []string{"run", "build/ci.go", "install"}
-	if arch != nil {
-		args = append(args, "--arch", *arch)
-	}
-	args = append(args, "./cmd/geth")
-	cmd := exec.Command("go", args...)
-	cmd.Dir = gethDir
-	cmd.Env = append(os.Environ(), "GOBIN="+filepath.Join(config.OutputDir))
-	if config.Verbose() {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-	return gethDir, cmd.Run()
+	return nil
 }
 
 func CloneRepo(repoURL, branch, destDir string, verbose bool) error {

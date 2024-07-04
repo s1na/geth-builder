@@ -11,6 +11,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	buildArchFlag = &cli.StringFlag{
+		Name:  "arch",
+		Usage: "Architecture to cross-build for",
+	}
+)
+
 func main() {
 	app := &cli.App{
 		Name:  "geth-builder",
@@ -27,35 +34,35 @@ func main() {
 				Name:  "build",
 				Usage: "Build Geth with custom tracer",
 				Action: func(c *cli.Context) error {
-					run(c)
+					buildCmd(c)
 					return nil
 				},
 				Flags: []cli.Flag{
+					buildArchFlag,
+					config.ConfigFileFlag,
+					config.GethRepoFlag,
+					config.GethBranchFlag,
+					config.PathFlag,
+					config.OutputFlag,
+				},
+			}, {
+				Name:  "archive",
+				Usage: "Build Geth and archive the artifacts",
+				Action: func(c *cli.Context) error {
+					archiveCmd(c)
+					return nil
+				},
+				Flags: []cli.Flag{
+					buildArchFlag,
+					config.ConfigFileFlag,
+					config.GethRepoFlag,
+					config.GethBranchFlag,
+					config.PathFlag,
+					config.OutputFlag,
 					&cli.StringFlag{
-						Name:  "arch",
-						Usage: "Architecture to cross-build for",
-					},
-					&cli.StringFlag{
-						Name:    "config",
-						Aliases: []string{"c"},
-						Value:   "geth-builder.yaml",
-						Usage:   "Path to configuration file",
-					},
-					&cli.StringFlag{
-						Name:  "geth.repo",
-						Usage: "Geth repository URL",
-					},
-					&cli.StringFlag{
-						Name:  "geth.branch",
-						Usage: "Geth repository branch",
-					},
-					&cli.StringFlag{
-						Name:  "path",
-						Usage: "Path to local tracer",
-					},
-					&cli.StringFlag{
-						Name:  "output",
-						Usage: "Output directory for built Geth binary",
+						Name:  "type",
+						Usage: "zip | tar",
+						Value: "tar",
 					},
 				},
 			},
@@ -77,32 +84,19 @@ func main() {
 	}
 }
 
-func run(ctx *cli.Context) {
-	// Load configuration
-	var (
-		cfg *config.Config
-		err error
-	)
-	if ctx.IsSet("config") {
-		cfg, err = config.LoadConfig(ctx.String("config"))
-		if err != nil {
-			log.Fatalf("Error loading configuration: %v\n", err)
-		}
-	} else {
-		cfg, err = config.GetDefaultConfig()
-		if err != nil {
-			log.Fatalf("Error getting default configuration: %v\n", err)
-		}
+func buildCmd(ctx *cli.Context) {
+	cfg, err := makeConfig(ctx)
+	if err != nil {
+		log.Fatalf("Error creating configuration: %v\n", err)
 	}
-	setFlags(ctx, cfg)
-
 	// Build Geth with custom tracer
 	var arch *string
 	if ctx.IsSet("arch") {
 		a := ctx.String("arch")
 		arch = &a
 	}
-	gethDir, err := builder.BuildGeth(cfg, arch)
+	b := builder.NewBuilder(cfg, arch)
+	gethDir, err := b.Build()
 	if err != nil {
 		log.Fatalf("Error building Geth: %v\n", err)
 	}
@@ -121,6 +115,25 @@ func run(ctx *cli.Context) {
 	}
 
 	log.Println("Geth built successfully.")
+}
+
+func archiveCmd(ctx *cli.Context) {
+	cfg, err := makeConfig(ctx)
+	if err != nil {
+		log.Fatalf("Error creating configuration: %v\n", err)
+	}
+	// Build Geth with custom tracer
+	var arch *string
+	if ctx.IsSet("arch") {
+		a := ctx.String("arch")
+		arch = &a
+	}
+	b := builder.NewBuilder(cfg, arch)
+	if err := b.Archive(ctx.String("type")); err != nil {
+		log.Fatalf("Error building the archive: %v\n", err)
+	}
+
+	log.Println("Archive built successfully.")
 }
 
 func initCmd(ctx *cli.Context) error {
@@ -142,6 +155,26 @@ func initCmd(ctx *cli.Context) error {
 
 func showHelp(ctx *cli.Context) {
 	cli.ShowAppHelp(ctx)
+}
+
+func makeConfig(ctx *cli.Context) (*config.Config, error) {
+	var (
+		cfg *config.Config
+		err error
+	)
+	if ctx.IsSet("config") {
+		cfg, err = config.LoadConfig(ctx.String("config"))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		cfg, err = config.GetDefaultConfig()
+		if err != nil {
+			return nil, err
+		}
+	}
+	setFlags(ctx, cfg)
+	return cfg, nil
 }
 
 func setFlags(ctx *cli.Context, cfg *config.Config) {
