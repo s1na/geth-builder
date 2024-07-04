@@ -11,7 +11,7 @@ import (
 	"github.com/s1na/geth-builder/transform"
 )
 
-func BuildGeth(config *config.Config) (string, error) {
+func BuildGeth(config *config.Config, arch *string) (string, error) {
 	// Clone the specified Geth repository and branch
 	gethDir := "./go-ethereum"
 	err := CloneRepo(config.GethRepo, config.GethBranch, gethDir, config.Verbose())
@@ -47,7 +47,12 @@ func BuildGeth(config *config.Config) (string, error) {
 		log.Fatalf("Error modifying main.go: %v\n", err)
 	}
 
-	cmd := exec.Command("make", "geth")
+	args := []string{"run", "build/ci.go", "install"}
+	if arch != nil {
+		args = append(args, "--arch", *arch)
+	}
+	args = append(args, "./cmd/geth")
+	cmd := exec.Command("go", args...)
 	cmd.Dir = gethDir
 	cmd.Env = append(os.Environ(), "GOBIN="+filepath.Join(config.OutputDir))
 	if config.Verbose() {

@@ -32,6 +32,10 @@ func main() {
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
+						Name:  "arch",
+						Usage: "Architecture to cross-build for",
+					},
+					&cli.StringFlag{
 						Name:    "config",
 						Aliases: []string{"c"},
 						Value:   "geth-builder.yaml",
@@ -93,7 +97,12 @@ func run(ctx *cli.Context) {
 	setFlags(ctx, cfg)
 
 	// Build Geth with custom tracer
-	gethDir, err := builder.BuildGeth(cfg)
+	var arch *string
+	if ctx.IsSet("arch") {
+		a := ctx.String("arch")
+		arch = &a
+	}
+	gethDir, err := builder.BuildGeth(cfg, arch)
 	if err != nil {
 		log.Fatalf("Error building Geth: %v\n", err)
 	}
