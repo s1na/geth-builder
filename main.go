@@ -65,6 +65,19 @@ func main() {
 						Value: "tar",
 					},
 				},
+			}, {
+				Name:  "test",
+				Usage: "Run tracer tests",
+				Action: func(c *cli.Context) error {
+					testCmd(c)
+					return nil
+				},
+				Flags: []cli.Flag{
+					config.ConfigFileFlag,
+					config.GethRepoFlag,
+					config.GethBranchFlag,
+					config.PathFlag,
+				},
 			},
 		},
 		Flags: []cli.Flag{
@@ -139,17 +152,28 @@ func archiveCmd(ctx *cli.Context) {
 func initCmd(ctx *cli.Context) error {
 	cfg, err := config.GetDefaultConfig()
 	if err != nil {
-		return err
+		log.Fatalf("Error creating default configuration: %v\n", err)
 	}
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		return err
+		log.Fatalf("Error marshalling configuration: %v\n", err)
 	}
 	path := "./geth-builder.yaml"
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		return err
+		log.Fatalf("Error writing configuration file: %v\n", err)
 	}
 	log.Printf("Configuration file created at %s\n", path)
+	return nil
+}
+
+func testCmd(ctx *cli.Context) error {
+	cfg, err := makeConfig(ctx)
+	if err != nil {
+		log.Fatalf("Error creating configuration: %v\n", err)
+	}
+	b := builder.NewBuilder(cfg, nil)
+	b.Test()
+
 	return nil
 }
 

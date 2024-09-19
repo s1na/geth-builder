@@ -15,22 +15,33 @@ import (
 )
 
 type Builder struct {
-	config *config.Config
-	arch   *string
+	config  *config.Config
+	arch    *string
+	gethDir string
 }
 
 func NewBuilder(config *config.Config, arch *string) *Builder {
-	return &Builder{config, arch}
+	return &Builder{config: config, arch: arch, gethDir: "./go-ethereum"}
 }
 
 func (b *Builder) Build() (string, error) {
-	gethDir := "./go-ethereum"
-	if err := b.prepareSource(gethDir); err != nil {
+	if err := b.prepareSource(b.gethDir); err != nil {
 		return "", err
 	}
 
-	return gethDir, b.build(gethDir, "./cmd/geth")
+	return b.gethDir, b.build(b.gethDir, "./cmd/geth")
+}
 
+func (b *Builder) Test() error {
+	if err := b.prepareSource(b.gethDir); err != nil {
+		return err
+	}
+
+	newTracerPath, err := b.getNewTracerPath()
+	if err != nil {
+		return err
+	}
+	return b.test(newTracerPath)
 }
 
 func (b *Builder) build(gethDir, pkg string) error {
@@ -43,6 +54,17 @@ func (b *Builder) build(gethDir, pkg string) error {
 	}
 	cmd := exec.Command("go", args...)
 	cmd.Dir = gethDir
+	if b.config.Verbose() {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	return cmd.Run()
+}
+
+func (b *Builder) test(path string) error {
+	args := []string{"test", "-v", "."}
+	cmd := exec.Command("go", args...)
+	cmd.Dir = path
 	if b.config.Verbose() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -115,13 +137,16 @@ func (b *Builder) prepareSource(gethDir string) error {
 		return err
 	}
 
-	dest := filepath.Join(gethDir, "eth", "tracers", "native")
+	newTracerPath, err := b.getNewTracerPath()
+	if err != nil {
+		return err
+	}
+	dest := filepath.Dir(newTracerPath)
 	// Copy the local tracer to the Geth tracers directory
 	err = copyLocalTracer(absTracerPath, dest)
 	if err != nil {
 		return err
 	}
-	newTracerPath := filepath.Join(dest, filepath.Base(absTracerPath))
 	// Remove go.mod and go.sum files from tracing package if available.
 	if err := os.RemoveAll(filepath.Join(newTracerPath, "go.mod")); err != nil {
 		return err
@@ -138,6 +163,14 @@ func (b *Builder) prepareSource(gethDir string) error {
 		return err
 	}
 	return nil
+}
+
+func (b *Builder) getNewTracerPath() (string, error) {
+	absTracerPath, err := b.config.AbsolutePath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(b.gethDir, "eth", "tracers", "native", filepath.Base(absTracerPath)), nil
 }
 
 func CloneRepo(repoURL, branch, destDir string, verbose bool) error {
